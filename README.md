@@ -33,14 +33,14 @@ pip install .
 ```
 This installs certify-tui as a command-line tool. You can now launch it using:
 ```bash
-certify-tui
+certify-tui --workdir /path/to/output
 ```
 
 ### Option 2: Install directly via GitHub (no clone required)
 
 ```bash
 pip install git+https://github.com/hamadodene/certify-tui.git
-certify-tui
+certify-tui --workdir /path/to/output
 ```
 
 ### Keyboard Controls
@@ -53,6 +53,13 @@ certify-tui
 
 ---
 
+## Usage
+```bash
+certify-tui --workdir /path/to/output
+```
+> **Note:** If --workdir is omitted, files will be saved in the current directory.
+
+---
 ## Interface Overview
 
 ### CSR Tab

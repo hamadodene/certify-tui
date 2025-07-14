@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import datetime
 import os
-from typing import Optional
+import argparse
 
 class CSRGenerator(Horizontal):
     sans_list = reactive([])
@@ -287,4 +287,13 @@ def main():
     app.run()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Certify TUI - CSR & Certificate Conversion Tool")
+    parser.add_argument(
+        "--workdir", type=str, default=".",
+        help="Directory where generated or converted files will be stored (default: current directory)"
+    )
+    args = parser.parse_args()
+
+    # Set global output dir
+    os.chdir(args.workdir)
     main()
