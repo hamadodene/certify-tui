@@ -1,7 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.widgets import (
     Header, Footer, Input, Button, Static,
-    Label
+    Label, SelectionList
 )
 from textual.containers import Vertical, Horizontal, Container
 from textual.reactive import reactive
@@ -13,6 +13,7 @@ import os
 
 class CSRGenerator(Static):
     sans_list = reactive([])
+    config_preview = reactive("")
 
     def compose(self) -> ComposeResult:
         yield Label("Generate a CSR")
@@ -22,19 +23,57 @@ class CSRGenerator(Static):
         yield Input(placeholder="Locality (L)", id="l")
         yield Input(placeholder="State (ST)", id="st")
         yield Input(placeholder="Country (C)", id="c")
-        yield Input(placeholder="Add SAN (press Enter to add)", id="san-input")
+        yield Input(placeholder="Add SAN (press Enter to add, type ! to remove last)", id="san-input")
         yield Static("SANs: []", id="sans-display")
+        yield Static("", id="conf-preview")
         yield Button("Generate CSR", id="generate")
         yield Static(id="output")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id == "san-input":
             value = event.value.strip()
-            if value:
+            if value == "!" and self.sans_list:
+                self.sans_list.pop()
+            elif value:
                 self.sans_list.append(value)
-                event.input.value = ""
-                sans_display = self.query_one("#sans-display", Static)
-                sans_display.update(f"SANs: {self.sans_list}")
+            event.input.value = ""
+            self.update_displays()
+
+    def update_displays(self):
+        self.query_one("#sans-display", Static).update(f"SANs: {self.sans_list}")
+        self.query_one("#conf-preview", Static).update(self.build_config_preview())
+
+    def build_config_preview(self):
+        cn = self.query_one("#cn", Input).value.strip()
+        o = self.query_one("#o", Input).value.strip()
+        ou = self.query_one("#ou", Input).value.strip()
+        l = self.query_one("#l", Input).value.strip()
+        st = self.query_one("#st", Input).value.strip()
+        c = self.query_one("#c", Input).value.strip()
+
+        config = f"""[req]
+default_bits = 4096
+prompt = no
+default_md = sha256
+req_extensions = req_ext
+distinguished_name = dn
+
+[dn]
+C={c}
+ST={st}
+L={l}
+O={o}
+OU={ou}
+CN={cn}
+
+[req_ext]
+subjectAltName = @alt_names
+
+[alt_names]
+"""
+        for i, san in enumerate(self.sans_list):
+            config += f"DNS.{i+1} = {san.strip()}\n"
+        return config
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "generate":
@@ -61,28 +100,7 @@ class CSRGenerator(Static):
         key_file = f"{filename_base}.key.nopasswd"
         csr_file = f"{filename_base}.csr"
 
-        config = f"""[req]
-default_bits = 4096
-prompt = no
-default_md = sha256
-req_extensions = req_ext
-distinguished_name = dn
-
-[dn]
-C={c}
-ST={st}
-L={l}
-O={o}
-OU={ou}
-CN={cn}
-
-[req_ext]
-subjectAltName = @alt_names
-
-[alt_names]
-"""
-        for i, san in enumerate(self.sans_list):
-            config += f"DNS.{i+1} = {san.strip()}\n"
+        config = self.build_config_preview()
 
         with tempfile.NamedTemporaryFile("w", delete=False) as conf:
             conf.write(config)
@@ -103,6 +121,59 @@ subjectAltName = @alt_names
             os.unlink(conf_path)
 
 
+class ConversionPanel(Static):
+    def compose(self) -> ComposeResult:
+        yield Label("Certificate Conversion")
+        yield Input(placeholder="Input certificate file (e.g. cert.cer)", id="cert")
+        yield Input(placeholder="Private key file (optional)", id="key")
+        yield Input(placeholder="Output file name (e.g. bundle.p12)", id="output")
+        yield Input(placeholder="Password (for P12, optional)", id="password")
+        yield Button("Convert to P12", id="to_p12")
+        yield Button("Extract from P12", id="from_p12")
+        yield Static(id="conv-output")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        cert = self.query_one("#cert", Input).value.strip()
+        key = self.query_one("#key", Input).value.strip()
+        out = self.query_one("#output", Input).value.strip()
+        password = self.query_one("#password", Input).value.strip()
+        log = self.query_one("#conv-output", Static)
+
+        try:
+            if event.button.id == "to_p12":
+                if not (cert and key and out):
+                    log.update("[red]Certificate, key, and output name are required.")
+                    return
+                cmd = [
+                    "openssl", "pkcs12", "-export",
+                    "-in", cert,
+                    "-inkey", key,
+                    "-out", out
+                ]
+                if password:
+                    cmd.extend(["-passout", f"pass:{password}"])
+                subprocess.run(cmd, check=True)
+                log.update(f"[green]Created P12: {out}")
+
+            elif event.button.id == "from_p12":
+                if not (cert and out):
+                    log.update("[red]P12 input file and output base name are required.")
+                    return
+                subprocess.run([
+                    "openssl", "pkcs12", "-in", cert, "-out", out + ".crt",
+                    "-clcerts", "-nokeys",
+                    *("-passin", f"pass:{password}") if password else ()
+                ], check=True)
+                subprocess.run([
+                    "openssl", "pkcs12", "-in", cert, "-out", out + ".key",
+                    "-nocerts", "-nodes",
+                    *("-passin", f"pass:{password}") if password else ()
+                ], check=True)
+                log.update(f"[green]Extracted CRT and KEY to {out}.crt and {out}.key")
+        except subprocess.CalledProcessError as e:
+            log.update(f"[red]Conversion failed: {e}")
+
+
 class CertifyTUI(App):
     CSS_PATH = None
     TITLE = "Certify TUI"
@@ -111,6 +182,7 @@ class CertifyTUI(App):
     def compose(self) -> ComposeResult:
         yield Header()
         yield CSRGenerator(id="csr-gen")
+        yield ConversionPanel(id="convert")
         yield Footer()
 
 
