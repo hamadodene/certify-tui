@@ -282,6 +282,9 @@ class CertifyTUI(App):
                 yield CertificateConverter()
         yield Footer()
 
-if __name__ == "__main__":
+def main():
     app = CertifyTUI()
     app.run()
+
+if __name__ == "__main__":
+    main()
