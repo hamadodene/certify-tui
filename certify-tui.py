@@ -12,24 +12,28 @@ import datetime
 import os
 from typing import Optional
 
-class CSRGenerator(Vertical):
+class CSRGenerator(Horizontal):
     sans_list = reactive([])
     config_preview = reactive("")
 
     def compose(self) -> ComposeResult:
-        yield Label("Generate a CSR")
-        yield Input(placeholder="Common Name (CN)", id="cn")
-        yield Input(placeholder="Organization (O)", id="o")
-        yield Input(placeholder="Organizational Unit (OU)", id="ou")
-        yield Input(placeholder="Locality (L)", id="l")
-        yield Input(placeholder="State (ST)", id="st")
-        yield Input(placeholder="Country (C)", id="c")
-        yield Input(placeholder="Add SAN (press Enter to add, type ! to remove last)", id="san-input")
-        yield Static("SANs: []", id="sans-display")
-        yield Static("", id="conf-preview")
-        yield Input(placeholder="Password to protect key (optional)", id="pass-protect")
-        yield Button("Generate CSR", id="generate")
-        yield Static(id="output")
+        with Vertical():
+            yield Label("Generate a CSR")
+            yield Input(placeholder="Common Name (CN)", id="cn")
+            yield Input(placeholder="Organization (O)", id="o")
+            yield Input(placeholder="Organizational Unit (OU)", id="ou")
+            yield Input(placeholder="Locality (L)", id="l")
+            yield Input(placeholder="State (ST)", id="st")
+            yield Input(placeholder="Country (C)", id="c")
+            yield Input(placeholder="Add SAN (press Enter to add, type ! to remove last)", id="san-input")
+            yield Static("SANs: []", id="sans-display")
+            yield Input(placeholder="Password to protect key (optional)", id="pass-protect")
+            yield Button("Generate CSR", id="generate")
+            yield Static(id="output")
+
+        with Vertical():
+            yield Label("OpenSSL Configuration Preview")
+            yield Static("", id="conf-preview")
 
     def on_mount(self) -> None:
         for field_id in ["cn", "o", "ou", "l", "st", "c"]:
@@ -281,4 +285,3 @@ class CertifyTUI(App):
 if __name__ == "__main__":
     app = CertifyTUI()
     app.run()
-
