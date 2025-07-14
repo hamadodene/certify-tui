@@ -170,12 +170,12 @@ class ConversionPanel(Static):
                 subprocess.run([
                     "openssl", "pkcs12", "-in", cert, "-out", out + ".crt",
                     "-clcerts", "-nokeys",
-                    *("-passin", f"pass:{password}") if password else ()
+                    *(["-passin", f"pass:{password}"] if password else [])
                 ], check=True)
                 subprocess.run([
                     "openssl", "pkcs12", "-in", cert, "-out", out + ".key",
                     "-nocerts", "-nodes",
-                    *("-passin", f"pass:{password}") if password else ()
+                    *(["-passin", f"pass:{password}"] if password else [])
                 ], check=True)
                 log.update(f"[green]Extracted CRT and KEY to {out}.crt and {out}.key")
         except subprocess.CalledProcessError as e:
