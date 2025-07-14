@@ -1,7 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.widgets import (
     Header, Footer, Input, Button, Static,
-    Label, SelectionList
+    Label, TabbedContent, TabPane, Tabs
 )
 from textual.containers import Vertical, Horizontal, Container
 from textual.reactive import reactive
@@ -26,11 +26,11 @@ class CSRGenerator(Static):
         yield Input(placeholder="Add SAN (press Enter to add, type ! to remove last)", id="san-input")
         yield Static("SANs: []", id="sans-display")
         yield Static("", id="conf-preview")
+        yield Input(placeholder="Password to protect key (optional)", id="pass-protect")
         yield Button("Generate CSR", id="generate")
         yield Static(id="output")
 
     def on_mount(self) -> None:
-        # Register on_change for live update on all DN inputs
         for field_id in ["cn", "o", "ou", "l", "st", "c"]:
             self.query_one(f"#{field_id}", Input).on_change = self.on_input_changed
 
@@ -98,6 +98,7 @@ subjectAltName = @alt_names
         l = self.query_one("#l", Input).value.strip()
         st = self.query_one("#st", Input).value.strip()
         c = self.query_one("#c", Input).value.strip()
+        password = self.query_one("#pass-protect", Input).value.strip()
 
         if not cn:
             self.log("CN is required.", "red")
@@ -106,6 +107,7 @@ subjectAltName = @alt_names
         year = datetime.datetime.now().year
         filename_base = cn.replace("*.", "wildcard.") + f"-{year}-{year+10}"
         key_file = f"{filename_base}.key.nopasswd"
+        key_pass_file = f"{filename_base}.key"
         csr_file = f"{filename_base}.csr"
 
         config = self.build_config_preview()
@@ -122,6 +124,16 @@ subjectAltName = @alt_names
                 "-keyout", key_file,
                 "-config", conf_path
             ], check=True)
+
+            if password:
+                subprocess.run([
+                    "openssl", "rsa", "-des3",
+                    "-in", key_file,
+                    "-out", key_pass_file,
+                    "-passout", f"pass:{password}"
+                ], check=True)
+                self.log(f"Protected key created: {key_pass_file}", "yellow")
+
             self.log(f"CSR and key generated: {csr_file}, {key_file}", "green")
         except subprocess.CalledProcessError as e:
             self.log(f"OpenSSL error: {e}", "red")
@@ -187,10 +199,19 @@ class CertifyTUI(App):
     TITLE = "Certify TUI"
     SUB_TITLE = "Generate CSRs and manage certificates"
 
+    BINDINGS = [
+        ("ctrl+c", "copy", "Copy"),
+        ("ctrl+v", "paste", "Paste"),
+        ("q", "quit", "Quit")
+    ]
+
     def compose(self) -> ComposeResult:
-        yield Header()
-        yield CSRGenerator(id="csr-gen")
-        yield ConversionPanel(id="convert")
+        yield Header("[b]Certify TUI[/b] — CTRL+C to copy, CTRL+V to paste, Q to quit")
+        yield TabbedContent(
+            Tabs("CSR Generator", "Conversions"),
+            TabPane(CSRGenerator(id="csr-gen"), id="CSR Generator"),
+            TabPane(ConversionPanel(id="convert"), id="Conversions")
+        )
         yield Footer()
 
 
