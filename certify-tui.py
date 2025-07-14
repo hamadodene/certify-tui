@@ -141,59 +141,6 @@ subjectAltName = @alt_names
             os.unlink(conf_path)
 
 
-class ConversionPanel(Static):
-    def compose(self) -> ComposeResult:
-        yield Label("Certificate Conversion")
-        yield Input(placeholder="Input certificate file (e.g. cert.cer)", id="cert")
-        yield Input(placeholder="Private key file (optional)", id="key")
-        yield Input(placeholder="Output file name (e.g. bundle.p12)", id="output")
-        yield Input(placeholder="Password (for P12, optional)", id="password")
-        yield Button("Convert to P12", id="to_p12")
-        yield Button("Extract from P12", id="from_p12")
-        yield Static(id="conv-output")
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        cert = self.query_one("#cert", Input).value.strip()
-        key = self.query_one("#key", Input).value.strip()
-        out = self.query_one("#output", Input).value.strip()
-        password = self.query_one("#password", Input).value.strip()
-        log = self.query_one("#conv-output", Static)
-
-        try:
-            if event.button.id == "to_p12":
-                if not (cert and key and out):
-                    log.update("[red]Certificate, key, and output name are required.")
-                    return
-                cmd = [
-                    "openssl", "pkcs12", "-export",
-                    "-in", cert,
-                    "-inkey", key,
-                    "-out", out
-                ]
-                if password:
-                    cmd.extend(["-passout", f"pass:{password}"])
-                subprocess.run(cmd, check=True)
-                log.update(f"[green]Created P12: {out}")
-
-            elif event.button.id == "from_p12":
-                if not (cert and out):
-                    log.update("[red]P12 input file and output base name are required.")
-                    return
-                subprocess.run([
-                    "openssl", "pkcs12", "-in", cert, "-out", out + ".crt",
-                    "-clcerts", "-nokeys",
-                    *(["-passin", f"pass:{password}"] if password else [])
-                ], check=True)
-                subprocess.run([
-                    "openssl", "pkcs12", "-in", cert, "-out", out + ".key",
-                    "-nocerts", "-nodes",
-                    *(["-passin", f"pass:{password}"] if password else [])
-                ], check=True)
-                log.update(f"[green]Extracted CRT and KEY to {out}.crt and {out}.key")
-        except subprocess.CalledProcessError as e:
-            log.update(f"[red]Conversion failed: {e}")
-
-
 class CertifyTUI(App):
     CSS_PATH = None
     TITLE = "Certify TUI"
@@ -207,11 +154,7 @@ class CertifyTUI(App):
 
     def compose(self) -> ComposeResult:
         yield Header("[b]Certify TUI[/b] — CTRL+C to copy, CTRL+V to paste, Q to quit")
-        yield TabbedContent(
-            Tabs("CSR Generator", "Conversions"),
-            TabPane(CSRGenerator(id="csr-gen"), id="CSR Generator"),
-            TabPane(ConversionPanel(id="convert"), id="Conversions")
-        )
+        yield CSRGenerator(id="csr-gen")
         yield Footer()
 
 
