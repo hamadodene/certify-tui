@@ -29,6 +29,11 @@ class CSRGenerator(Static):
         yield Button("Generate CSR", id="generate")
         yield Static(id="output")
 
+    def on_mount(self) -> None:
+        # Register on_change for live update on all DN inputs
+        for field_id in ["cn", "o", "ou", "l", "st", "c"]:
+            self.query_one(f"#{field_id}", Input).on_change = self.on_input_changed
+
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id == "san-input":
             value = event.value.strip()
@@ -38,6 +43,9 @@ class CSRGenerator(Static):
                 self.sans_list.append(value)
             event.input.value = ""
             self.update_displays()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        self.update_displays()
 
     def update_displays(self):
         self.query_one("#sans-display", Static).update(f"SANs: {self.sans_list}")
