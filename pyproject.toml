@@ -13,4 +13,4 @@ dependencies = [
 ]
 
 [project.scripts]
-certify-tui = "certify_tui.app:main"
+certify-tui = "certify_tui.__main__:main"

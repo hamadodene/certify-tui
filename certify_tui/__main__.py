@@ -285,3 +285,6 @@ class CertifyTUI(App):
 def main():
     app = CertifyTUI()
     app.run()
+
+if __name__ == "__main__":
+    main()
