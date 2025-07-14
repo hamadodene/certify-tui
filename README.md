@@ -2,6 +2,10 @@
 
 **Certify TUI** is a terminal-based interactive tool for generating Certificate Signing Requests (CSRs) and converting certificate formats — built using [Textual](https://github.com/Textualize/textual).
 
+<img width="1666" height="886" alt="image" src="https://github.com/user-attachments/assets/d0bbaa1a-6e27-46d1-b19e-69572d562820" />
+
+<img width="1648" height="878" alt="image" src="https://github.com/user-attachments/assets/424ebfe0-fe2c-439c-aed9-7f84685009c7" />
+
 ---
 
 ## Features
