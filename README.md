@@ -24,32 +24,23 @@
 
 ## Installation
 
-### 1. Clone the repository
+### Option 1. Clone the repository
 
 ```bash
-git clone https://your-repo-url/certify-tui.git
+git clone https://github.com/<your-username>/certify-tui.git
 cd certify-tui
+pip install .
+```
+This installs certify-tui as a command-line tool. You can now launch it using:
+```bash
+certify-tui
 ```
 
-### 2. (Optional) Create a virtual environment
+### Option 2: Install directly via GitHub (no clone required)
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Usage
-
-```bash
-python3 certify-tui.py
+pip install git+https://github.com/hamadodene/certify-tui.git
+certify-tui
 ```
 
 ### Keyboard Controls
