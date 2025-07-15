@@ -110,7 +110,7 @@ subjectAltName = @alt_names
             return
 
         year = datetime.datetime.now().year
-        filename_base = cn.replace("*.", "wildcard.") + f"-{year}-{year+10}"
+        filename_base = cn.replace("*.", "wildcard.") + f"-{year}-{year+1}"
         key_file = f"{filename_base}.key.nopasswd"
         key_pass_file = f"{filename_base}.key"
         csr_file = f"{filename_base}.csr"
